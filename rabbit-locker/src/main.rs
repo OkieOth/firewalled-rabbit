@@ -1,24 +1,44 @@
-/// heavily inspired from the code here: https://github.com/geoffreycopin/http_server/blob/master/src/main.rs
-/// https://dev.to/geoffreycopin/-build-a-web-server-with-rust-and-tokio-part-0-the-simplest-possible-get-handler-1lhi
-/// Thank you, for providing that example
 
-use clap::Parser;
+#[macro_use] extern crate rocket;
 
-/// Simple webserver that calls iptables to block for some time
-/// a specific port
-#[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
-struct Args {
-    /// Port to listen at
-    #[arg(short, long)]
-    port: usize,
-
-    /// Port to block
-    #[arg(short, long)]
-    blocked_port: usize,
+#[get("/")]
+fn root() -> &'static str {
+    "Call `/block` for block 6752 or `/unblock` to free the port again"
 }
 
-#[tokio::main]
-async fn main() {
-    println!("Hello, world!");
+#[get("/block")]
+fn block() -> &'static str {
+    match std::process::Command::new("iptables")
+        .arg("--list")
+        .output() {
+        Ok(o) => {
+            if o.status.success() {
+                let o_vec = o.stdout;
+                let s = String::from_utf8_lossy(&o_vec).to_string();
+                Box::leak(s.into_boxed_str())
+    
+            } else {
+                let o_vec = o.stderr;
+                let s = String::from_utf8_lossy(&o_vec).to_string();
+                Box::leak(s.into_boxed_str())
+            }
+        },
+        Err(e) => {
+            let s = format!("failed to exec iptables: {}", e.to_string());
+            Box::leak(s.into_boxed_str())
+        }
+    }
+}
+
+#[get("/unblock")]
+fn unblock() -> &'static str {
+    "I opened local port 6752"
+}
+
+#[launch]
+fn rocket() -> _ {
+    rocket::build()
+    .mount("/", routes![root])
+    .mount("/", routes![block])
+    .mount("/", routes![unblock])
 }
