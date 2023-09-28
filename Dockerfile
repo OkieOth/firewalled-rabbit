@@ -27,8 +27,7 @@ RUN . ~/.cargo/env && RUSTFLAGS="-C target-feature=-crt-static" cargo build --re
 
 FROM rabbitmq:3.11.19-management-alpine
 
-RUN apk add --update iptables && \
-    rm -rf /var/cache/apk/*
+RUN apk add --update --no-cache iptables
 
 WORKDIR /opt/rabbit-locker/
 
